@@ -14,8 +14,8 @@ Locally the backend runs inside the dev server and saves to a git-ignored `.admi
 Start the website too (`npm run dev` in the parent `VILLA CAVO` folder, port 5173) to use Preview and see changes.
 
 ## Deploy on Vercel (its own Vercel project)
-This is its own git repository (`villacavo-admin`), linked into the website repo as a git submodule
-at `admin/`. Commit and push admin changes here; the website repo only stores which admin commit it points at.
+This is its own git repository (`villacavo-admin`), fully separate from the website repo. Locally it sits
+in the website's `admin/` folder, which the website's `.gitignore` excludes.
 1. Push this folder to its own GitHub repository (not the website's).
 2. Vercel → **Add New → Project** → import that admin repository (Framework preset: Vite). Deploy.
 3. **Storage → Create → Blob** (public access) → connect it to this admin project.
