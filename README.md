@@ -11,10 +11,11 @@ npm install
 npm run dev      # http://localhost:5174   password: admin
 ```
 Locally the backend runs inside the dev server and saves to a git-ignored `.admin-data/` folder.
-Start the website too (`npm run dev` in the `VILLA CAVO` folder, port 5173) to use Preview and see changes.
+Start the website too (`npm run dev` in the parent `VILLA CAVO` folder, port 5173) to use Preview and see changes.
 
 ## Deploy on Vercel (its own Vercel project)
-This folder is its own git repository, separate from the website's.
+This folder lives inside the website folder but is its own git repository (`villacavo-admin`).
+The website's `.gitignore` excludes `admin/`, so it is never part of the website repo or deploy.
 1. Push this folder to its own GitHub repository (not the website's).
 2. Vercel → **Add New → Project** → import that admin repository (Framework preset: Vite). Deploy.
 3. **Storage → Create → Blob** (public access) → connect it to this admin project.
@@ -37,6 +38,6 @@ This folder is its own git repository, separate from the website's.
 
 ## Shared files
 `src/shared/` and `public/images` are copies of the website's default content, icons and photos.
-`npm run dev` / `npm run build` refresh them automatically from the website folder next to this one,
-`../VILLA CAVO` (or set `SITE_DIR` to point elsewhere). Run `npm run sync` to refresh by hand.
+`npm run dev` / `npm run build` refresh them automatically from the website in the parent folder
+(or set `SITE_DIR` to point elsewhere). Run `npm run sync` to refresh by hand.
 Commit the refreshed copies so the Vercel build (which has no website folder) uses them.

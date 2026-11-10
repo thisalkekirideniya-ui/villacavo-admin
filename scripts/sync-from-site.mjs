@@ -2,15 +2,15 @@
 // project, so the admin always edits the same sections the website shows.
 //
 // Runs automatically before `npm run dev` and `npm run build` when the website
-// folder ("VILLA CAVO") sits next to this admin folder, or wherever SITE_DIR
-// points. When the website isn't there (e.g. on Vercel), the copies already in
-// src/shared and public/ are used.
+// is the parent folder of this admin folder (VILLA CAVO/admin), or wherever
+// SITE_DIR points. When the website isn't there (e.g. on Vercel), the copies
+// already in src/shared and public/ are used.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const adminRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const siteRoot = path.resolve(process.env.SITE_DIR || path.join(adminRoot, '..', 'VILLA CAVO'))
+const siteRoot = path.resolve(process.env.SITE_DIR || path.join(adminRoot, '..'))
 
 const files = [
   ['src/data/site.js', 'src/shared/data/site.js'],
