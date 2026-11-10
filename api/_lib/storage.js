@@ -157,7 +157,101 @@ function safeName(name, type) {
   return `${base}-${crypto.randomBytes(4).toString('hex')}.${TYPES[type]}`
 }
 
+/* ---------------------------------------------------------- cloudinary */
+// When Cloudinary keys are set, uploaded photos go to Cloudinary instead of
+// Blob / the local folder. Set CLOUDINARY_URL (cloudinary://KEY:SECRET@CLOUD)
+// or CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET.
+const CLD_FOLDER = () => (process.env.CLOUDINARY_FOLDER || 'villa-cavo').replace(/^\/+|\/+$/g, '')
+
+function cloudinary() {
+  const u = process.env.CLOUDINARY_URL
+  if (u) {
+    const m = /^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/.exec(u.trim())
+    if (m) return { key: m[1], secret: m[2], cloud: m[3] }
+  }
+  const { CLOUDINARY_CLOUD_NAME: cloud, CLOUDINARY_API_KEY: key, CLOUDINARY_API_SECRET: secret } = process.env
+  return cloud && key && secret ? { cloud, key, secret } : null
+}
+
+export const mediaMode = () => (cloudinary() ? 'cloudinary' : storageMode())
+
+const sign = (params, secret) =>
+  crypto
+    .createHash('sha1')
+    .update(Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join('&') + secret)
+    .digest('hex')
+
+// Delivered with automatic format and quality, so photos load fast on phones.
+const cldUrl = (c, r) => `https://res.cloudinary.com/${c.cloud}/image/upload/f_auto,q_auto/v${r.version}/${r.public_id}.${r.format}`
+
+function cldPublicId(c, url) {
+  let u
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  const prefix = `/${c.cloud}/image/upload/`
+  if (u.hostname !== 'res.cloudinary.com' || !u.pathname.startsWith(prefix)) return null
+  const rest = decodeURIComponent(u.pathname.slice(prefix.length))
+    .replace(/^f_auto,q_auto\//, '')
+    .replace(/^v\d+\//, '')
+    .replace(/\.[a-z0-9]+$/i, '')
+  return rest.startsWith(`${CLD_FOLDER()}/`) ? rest : null
+}
+
+async function cldCall(c, pathPart, init) {
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${c.cloud}/${pathPart}`, init)
+  const body = await r.json().catch(() => ({}))
+  if (!r.ok) throw Object.assign(new Error(`Cloudinary: ${body.error?.message || r.status}`), { status: r.status === 401 ? 502 : r.status })
+  return body
+}
+
+async function cldList(c) {
+  const auth = 'Basic ' + Buffer.from(`${c.key}:${c.secret}`).toString('base64')
+  const out = []
+  let cursor
+  do {
+    const q = new URLSearchParams({ prefix: `${CLD_FOLDER()}/`, max_results: '500' })
+    if (cursor) q.set('next_cursor', cursor)
+    const page = await cldCall(c, `resources/image/upload?${q}`, { headers: { Authorization: auth } })
+    out.push(...page.resources)
+    cursor = page.next_cursor
+  } while (cursor)
+  return out
+    .map((r) => ({ url: cldUrl(c, r), name: r.public_id.split('/').pop(), size: r.bytes, uploadedAt: new Date(r.created_at).toISOString() }))
+    .sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : -1))
+}
+
+async function cldUpload(c, name, type, buffer) {
+  const params = {
+    folder: CLD_FOLDER(),
+    public_id: safeName(name, type).replace(/\.[a-z]+$/, ''),
+    timestamp: Math.floor(Date.now() / 1000),
+  }
+  const form = new FormData()
+  for (const [k, v] of Object.entries(params)) form.append(k, String(v))
+  form.append('api_key', c.key)
+  form.append('signature', sign(params, c.secret))
+  form.append('file', `data:${type};base64,${buffer.toString('base64')}`)
+  const r = await cldCall(c, 'image/upload', { method: 'POST', body: form })
+  return { url: cldUrl(c, r), name: r.public_id.split('/').pop(), size: r.bytes, uploadedAt: new Date(r.created_at).toISOString() }
+}
+
+async function cldDelete(c, url) {
+  const public_id = cldPublicId(c, url)
+  if (!public_id) throw Object.assign(new Error('Only uploaded photos can be deleted.'), { status: 400 })
+  const params = { public_id, timestamp: Math.floor(Date.now() / 1000), invalidate: 'true' }
+  const form = new FormData()
+  for (const [k, v] of Object.entries(params)) form.append(k, String(v))
+  form.append('api_key', c.key)
+  form.append('signature', sign(params, c.secret))
+  await cldCall(c, 'image/destroy', { method: 'POST', body: form })
+}
+
 export async function listMedia() {
+  const c = cloudinary()
+  if (c) return cldList(c)
   requireStorage()
   if (storageMode() === 'local') {
     const dir = path.join(localDir(), MEDIA)
@@ -176,9 +270,11 @@ export async function listMedia() {
 }
 
 export async function putMedia(name, type, buffer) {
-  requireStorage()
   if (!TYPES[type]) throw Object.assign(new Error('Only JPG, PNG, WebP, GIF or AVIF images can be uploaded.'), { status: 415 })
   if (buffer.length > MAX_MEDIA_BYTES) throw Object.assign(new Error('That image is larger than 4 MB.'), { status: 413 })
+  const c = cloudinary()
+  if (c) return cldUpload(c, name, type, buffer)
+  requireStorage()
   const file = safeName(name, type)
   if (storageMode() === 'local') {
     const dir = path.join(localDir(), MEDIA)
@@ -192,6 +288,8 @@ export async function putMedia(name, type, buffer) {
 }
 
 export async function deleteMedia(url) {
+  const c = cloudinary()
+  if (c) return cldDelete(c, url)
   requireStorage()
   if (storageMode() === 'local') {
     const rel = String(url || '').replace(localMediaBase(), '')

@@ -160,7 +160,8 @@ function Login({ onSignedIn }) {
             ) : (
               <ul className="mt-3 space-y-2 text-stone-600">
                 <SetupItem ok={health.password} text="ADMIN_PASSWORD environment variable" />
-                <SetupItem ok={!!health.storage} text="Vercel Blob storage connected" />
+                <SetupItem ok={!!health.storage} text="Vercel Blob storage connected (saves the page text)" />
+                <SetupItem ok={health.media === 'cloudinary'} text="Cloudinary keys added (stores uploaded photos — optional)" />
               </ul>
             )}
             <p className="mt-3 text-xs text-stone-500">Set these in your Vercel project, then redeploy.</p>
@@ -341,7 +342,7 @@ function Admin({ onSignOut }) {
     )
   }
 
-  const ctx = { content: draft, baseline, setAt, media, notify, pickImages, preview }
+  const ctx = { content: draft, baseline, setAt, media, notify, pickImages, preview, health }
   const { title, subtitle, url, body } = resolveView(view, { draft, setAt, loadVersion, dirty, health, publish, publishing, navigate, preview, media })
 
   return (
@@ -516,6 +517,14 @@ function Dashboard({ draft, dirty, health, publish, publishing, navigate, media 
               : 'Connect a Vercel Blob store to this project (Vercel → Storage → Create → Blob → connect), then redeploy. Until then, publishing and uploads will fail.'}
           </p>
         </Card>
+      )}
+
+      {health && (
+        <p className="text-xs text-stone-500">
+          {health.media === 'cloudinary'
+            ? 'Uploaded photos are stored in Cloudinary.'
+            : 'Uploaded photos are stored in ' + (health.storage === 'local' ? 'the local .admin-data folder' : 'Vercel Blob') + '. Add Cloudinary keys to store them in Cloudinary instead.'}
+        </p>
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

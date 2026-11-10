@@ -11,6 +11,7 @@ npm install
 npm run dev      # http://localhost:5174   password: admin
 ```
 Locally the backend runs inside the dev server and saves to a git-ignored `.admin-data/` folder.
+To test Cloudinary uploads locally, put `CLOUDINARY_URL=...` in a `.env.local` file (git-ignored).
 Start the website too (`npm run dev` in the parent `VILLA CAVO` folder, port 5173) to use Preview and see changes.
 
 ## Deploy on Vercel (its own Vercel project)
@@ -23,6 +24,11 @@ in the website's `admin/` folder, which the website's `.gitignore` excludes.
 4. **Settings → Environment Variables:**
    - `ADMIN_PASSWORD` — the password for signing in
    - `VITE_SITE_URL` — the website address, e.g. `https://villacavo.vercel.app` (for Preview)
+   - Optional — photos in **Cloudinary**: `CLOUDINARY_URL` — copy the “API environment variable”
+     (`cloudinary://KEY:SECRET@CLOUD_NAME`) from the Cloudinary dashboard. Uploaded photos then go to
+     the `villa-cavo` folder in Cloudinary (change with `CLOUDINARY_FOLDER`) and are served with
+     automatic format and quality. Without it, photos are stored in Vercel Blob. Page text is always
+     kept in Vercel Blob, so the Blob store is still needed.
 5. **Redeploy** the admin project.
 6. In the **website** project add `VITE_CONTENT_URL` = `https://<admin-address>/api/content`, then redeploy the website.
 

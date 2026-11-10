@@ -164,7 +164,7 @@ function Thumb({ item, selected, onClick, children }) {
 
 /** Full media library page. */
 export function MediaLibrary() {
-  const { media, content, notify } = useAdmin()
+  const { media, content, notify, health } = useAdmin()
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
   const list = media.all.filter(
@@ -244,7 +244,7 @@ export function MediaLibrary() {
         </div>
       )}
       <p className="text-xs text-stone-500">
-        Built-in photos come with the website code and can’t be deleted here. Uploaded photos are stored in your Vercel Blob storage.
+        Built-in photos come with the website code and can’t be deleted here. Uploaded photos are stored in {health?.media === 'cloudinary' ? 'Cloudinary' : 'your Vercel Blob storage'}.
       </p>
     </div>
   )

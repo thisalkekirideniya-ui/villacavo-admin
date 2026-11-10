@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -50,9 +50,14 @@ function localApi() {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Let the local backend see server-side settings from .env.local
+  // (ADMIN_PASSWORD, CLOUDINARY_*, BLOB_READ_WRITE_TOKEN …).
+  for (const [k, v] of Object.entries(loadEnv(mode, root, ''))) process.env[k] ??= v
+  return {
   plugins: [react(), localApi()],
   // the website runs on 5173, the admin on 5174
   server: { port: 5174, strictPort: true },
   preview: { port: 5174 },
+  }
 })
