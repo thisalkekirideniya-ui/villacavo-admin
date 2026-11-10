@@ -31,24 +31,47 @@ async function decode(file) {
   }
 }
 
+// Windows browsers sometimes report a photo's type as "" or "image/jpg",
+// "image/pjpeg", "image/jfif" … Work it out from the type or the file extension.
+const EXT_TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', jpe: 'image/jpeg', jfif: 'image/jpeg', pjpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', bmp: 'image/bmp', heic: 'image/heic', heif: 'image/heif' }
+const ALIASES = { 'image/jpg': 'image/jpeg', 'image/pjpeg': 'image/jpeg', 'image/jfif': 'image/jpeg', 'image/x-png': 'image/png' }
+export function imageType(file) {
+  const t = String(file.type || '').toLowerCase()
+  if (t.startsWith('image/')) return ALIASES[t] || t
+  const ext = String(file.name || '').split('.').pop().toLowerCase()
+  return EXT_TYPES[ext] || ''
+}
+
 const toBlob = (canvas, type, quality) => new Promise((resolve) => canvas.toBlob(resolve, type, quality))
 
 export async function prepareImage(file) {
-  if (!file.type.startsWith('image/')) throw new Error(`${file.name} is not an image.`)
+  const ftype = imageType(file)
+  if (!ftype) throw new Error(`${file.name} is not an image.`)
   // GIFs would lose their animation on a canvas; send them as they are.
-  if (file.type === 'image/gif') {
+  if (ftype === 'image/gif') {
     if (file.size > HARD_LIMIT) throw new Error(`${file.name} is larger than 4 MB.`)
-    return { name: file.name, type: file.type, data: await readAsDataUrl(file) }
+    return { name: file.name, type: ftype, data: await readAsDataUrl(file) }
   }
 
-  const source = await decode(file)
+  let source
+  try {
+    source = await decode(file)
+  } catch {
+    throw new Error(
+      /hei[cf]$/.test(ftype)
+        ? `${file.name} is an iPhone HEIC photo, which this browser can't open. Save it as JPG first (or set the iPhone camera to “Most Compatible”).`
+        : `${file.name} could not be opened as an image.`
+    )
+  }
   const w = source.width || source.naturalWidth
   const h = source.height || source.naturalHeight
   const scale = Math.min(1, MAX_SIDE / Math.max(w, h))
 
   // Small files that need no resizing go up untouched (keeps PNG transparency).
-  if (scale === 1 && file.size <= TARGET_BYTES && ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    return { name: file.name, type: file.type, data: await readAsDataUrl(file) }
+  if (scale === 1 && file.size <= TARGET_BYTES && ['image/jpeg', 'image/png', 'image/webp'].includes(ftype)) {
+    // re-label the data with the corrected type, whatever the browser called it
+    const data = (await readAsDataUrl(file)).replace(/^data:[^;,]*/, `data:${ftype}`)
+    return { name: file.name, type: ftype, data }
   }
 
   const canvas = document.createElement('canvas')
@@ -56,7 +79,7 @@ export async function prepareImage(file) {
   canvas.height = Math.round(h * scale)
   const ctx = canvas.getContext('2d')
   ctx.imageSmoothingQuality = 'high'
-  const keepPng = file.type === 'image/png' && file.size <= TARGET_BYTES * 2
+  const keepPng = ftype === 'image/png' && file.size <= TARGET_BYTES * 2
   if (!keepPng) {
     ctx.fillStyle = '#fff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)

@@ -278,6 +278,7 @@ export async function listMedia() {
 }
 
 export async function putMedia(name, type, buffer) {
+  type = { 'image/jpg': 'image/jpeg', 'image/pjpeg': 'image/jpeg', 'image/jfif': 'image/jpeg', 'image/x-png': 'image/png' }[String(type).toLowerCase()] || String(type).toLowerCase()
   if (!TYPES[type]) throw Object.assign(new Error('Only JPG, PNG, WebP, GIF or AVIF images can be uploaded.'), { status: 415 })
   if (buffer.length > MAX_MEDIA_BYTES) throw Object.assign(new Error('That image is larger than 4 MB.'), { status: 413 })
   const c = cloudinary()

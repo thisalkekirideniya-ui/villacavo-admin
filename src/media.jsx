@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from './api'
-import { prepareImage, formatBytes } from './imageTools'
+import { prepareImage, formatBytes, imageType } from './imageTools'
 import { builtInMedia } from './shared/data/content'
 import { useAdmin } from './context'
 import { Button, IconGlyph, Empty, Spinner } from './ui'
@@ -31,9 +31,9 @@ export function useMediaStore(notify) {
 
   const uploadFiles = useCallback(
     async (fileList) => {
-      const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'))
+      const files = Array.from(fileList || []).filter((f) => imageType(f))
       if (!files.length) {
-        notify?.('Choose image files (JPG, PNG, WebP, GIF).', 'error')
+        notify?.('That file doesn’t look like a photo. Choose a JPG, PNG, WebP or GIF image.', 'error')
         return []
       }
       const jobs = files.map((f, i) => ({ id: `${Date.now()}-${i}`, name: f.name, status: 'working' }))
