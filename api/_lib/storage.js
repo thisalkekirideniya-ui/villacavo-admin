@@ -173,6 +173,13 @@ function cloudinary() {
   return cloud && key && secret ? { cloud, key, secret } : null
 }
 
+// Catch a secret that was never filled in before Cloudinary rejects it as "Invalid Signature".
+function checkSecret(c) {
+  if (/PASTE|your_api_secret|[<>\s]/i.test(c.secret)) {
+    throw Object.assign(new Error('The Cloudinary API secret has not been filled in. Paste the API Secret from Cloudinary → Settings → API Keys into CLOUDINARY_URL, save, and try again.'), { status: 500 })
+  }
+}
+
 export const mediaMode = () => (cloudinary() ? 'cloudinary' : storageMode())
 
 const sign = (params, secret) =>
@@ -201,6 +208,7 @@ function cldPublicId(c, url) {
 }
 
 async function cldCall(c, pathPart, init) {
+  checkSecret(c)
   const r = await fetch(`https://api.cloudinary.com/v1_1/${c.cloud}/${pathPart}`, init)
   const body = await r.json().catch(() => ({}))
   if (!r.ok) throw Object.assign(new Error(`Cloudinary: ${body.error?.message || r.status}`), { status: r.status === 401 ? 502 : r.status })

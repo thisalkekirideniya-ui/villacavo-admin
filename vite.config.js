@@ -53,7 +53,10 @@ function localApi() {
 export default defineConfig(({ mode }) => {
   // Let the local backend see server-side settings from .env.local
   // (ADMIN_PASSWORD, CLOUDINARY_*, BLOB_READ_WRITE_TOKEN …).
-  for (const [k, v] of Object.entries(loadEnv(mode, root, ''))) process.env[k] ??= v
+  // Values from the real shell win; values from .env files are refreshed when
+  // the file changes (Vite restarts the server in the same process).
+  globalThis.__vcShellEnv ??= new Set(Object.keys(process.env))
+  for (const [k, v] of Object.entries(loadEnv(mode, root, ''))) if (!globalThis.__vcShellEnv.has(k)) process.env[k] = v
   return {
   plugins: [react(), localApi()],
   // the website runs on 5173, the admin on 5174
