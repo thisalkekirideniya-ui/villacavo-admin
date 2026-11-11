@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from './api'
-import { prepareImage, formatBytes, imageType } from './imageTools'
+import { prepareImage, formatBytes, detectImageType } from './imageTools'
 import { builtInMedia } from './shared/data/content'
 import { useAdmin } from './context'
 import { Button, IconGlyph, Empty, Spinner } from './ui'
@@ -31,7 +31,9 @@ export function useMediaStore(notify) {
 
   const uploadFiles = useCallback(
     async (fileList) => {
-      const files = Array.from(fileList || []).filter((f) => imageType(f))
+      const picked = Array.from(fileList || [])
+      const types = await Promise.all(picked.map((f) => detectImageType(f)))
+      const files = picked.filter((_, i) => types[i])
       if (!files.length) {
         notify?.('That file doesn’t look like a photo. Choose a JPG, PNG, WebP or GIF image.', 'error')
         return []
@@ -117,8 +119,9 @@ function DropZone({ onFiles, compact = false }) {
         multiple
         className="hidden"
         onChange={(e) => {
-          onFiles(e.target.files)
+          const files = Array.from(e.target.files || [])
           e.target.value = ''
+          if (files.length) onFiles(files)
         }}
       />
     </div>

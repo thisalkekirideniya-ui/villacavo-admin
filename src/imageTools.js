@@ -42,11 +42,39 @@ export function imageType(file) {
   return EXT_TYPES[ext] || ''
 }
 
+// Work out the real format from the file's first bytes, so a photo saved with
+// no extension (or a wrong one, or a blank type) is still recognised.
+export async function sniffImageType(file) {
+  let b
+  try {
+    b = new Uint8Array(await file.slice(0, 16).arrayBuffer())
+  } catch {
+    return ''
+  }
+  const s = (from, to) => String.fromCharCode(...b.slice(from, to))
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg'
+  if (b[0] === 0x89 && s(1, 4) === 'PNG') return 'image/png'
+  if (s(0, 4) === 'GIF8') return 'image/gif'
+  if (s(0, 4) === 'RIFF' && s(8, 12) === 'WEBP') return 'image/webp'
+  if (s(0, 2) === 'BM') return 'image/bmp'
+  if (s(4, 8) === 'ftyp') {
+    const brand = s(8, 12)
+    if (/^avi[fs]$/.test(brand)) return 'image/avif'
+    if (/^(hei[cxsm]|hev[cx]|mif1|msf1)$/.test(brand)) return 'image/heic'
+  }
+  return ''
+}
+
+/** Best guess of a file's image type: real bytes first, then the browser's label / extension. */
+export async function detectImageType(file) {
+  return (await sniffImageType(file)) || imageType(file)
+}
+
 const toBlob = (canvas, type, quality) => new Promise((resolve) => canvas.toBlob(resolve, type, quality))
 
 export async function prepareImage(file) {
-  const ftype = imageType(file)
-  if (!ftype) throw new Error(`${file.name} is not an image.`)
+  const ftype = await detectImageType(file)
+  if (!ftype) throw new Error(`${file.name} is not a photo the admin can read. Choose a JPG, PNG, WebP or GIF image.`)
   // GIFs would lose their animation on a canvas; send them as they are.
   if (ftype === 'image/gif') {
     if (file.size > HARD_LIMIT) throw new Error(`${file.name} is larger than 4 MB.`)

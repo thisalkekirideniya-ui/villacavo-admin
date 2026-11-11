@@ -195,8 +195,10 @@ function UploadButton({ onUploaded, multiple = false, label = 'Upload' }) {
         multiple={multiple}
         className="hidden"
         onChange={async (e) => {
-          const files = e.target.files
+          // copy the files out first: clearing the input empties its live FileList
+          const files = Array.from(e.target.files || [])
           e.target.value = ''
+          if (!files.length) return
           setBusy(true)
           const items = await media.uploadFiles(files)
           setBusy(false)
