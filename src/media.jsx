@@ -247,7 +247,7 @@ export function MediaLibrary() {
         </div>
       )}
       <p className="text-xs text-stone-500">
-        Built-in photos come with the website code and can’t be deleted here. Uploaded photos are stored in {health?.media === 'cloudinary' ? 'Cloudinary' : 'your Vercel Blob storage'}.
+        Built-in photos come with the website code and can’t be deleted here. Uploaded photos are stored in {{ cloudinary: 'Cloudinary', supabase: 'Supabase Storage', local: 'the local .admin-data folder' }[health?.media] || 'your Vercel Blob storage'}.
       </p>
     </div>
   )

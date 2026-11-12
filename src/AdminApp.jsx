@@ -160,7 +160,7 @@ function Login({ onSignedIn }) {
             ) : (
               <ul className="mt-3 space-y-2 text-stone-600">
                 <SetupItem ok={health.password} text="ADMIN_PASSWORD environment variable" />
-                <SetupItem ok={!!health.storage} text="Vercel Blob storage connected (saves the page text)" />
+                <SetupItem ok={!!health.storage} text="Supabase (or Vercel Blob) connected (saves the page text)" />
                 <SetupItem ok={health.media === 'cloudinary'} text="Cloudinary keys added (stores uploaded photos — optional)" />
               </ul>
             )}
@@ -508,13 +508,13 @@ function Dashboard({ draft, dirty, health, publish, publishing, navigate, media 
         {dirty && <Button onClick={publish} disabled={publishing}>{publishing ? 'Publishing…' : 'Publish changes'}</Button>}
       </Card>
 
-      {health && health.storage !== 'blob' && (
+      {health && health.storage !== 'blob' && health.storage !== 'supabase' && (
         <Card className="border-l-4 border-amber-400 p-5 text-sm">
           <p className="font-medium text-stone-900">{health.storage === 'local' ? 'Local test mode' : 'Storage not connected'}</p>
           <p className="mt-1 text-stone-600">
             {health.storage === 'local'
               ? 'You are running the admin on your computer. Changes and photos are saved in the .admin-data folder only — publish from the live Vercel site to change the real website.'
-              : 'Connect a Vercel Blob store to this project (Vercel → Storage → Create → Blob → connect), then redeploy. Until then, publishing and uploads will fail.'}
+              : 'Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to this Vercel project (or connect a Blob store), then redeploy. Until then, publishing and uploads will fail.'}
           </p>
         </Card>
       )}
@@ -523,7 +523,7 @@ function Dashboard({ draft, dirty, health, publish, publishing, navigate, media 
         <p className="text-xs text-stone-500">
           {health.media === 'cloudinary'
             ? 'Uploaded photos are stored in Cloudinary.'
-            : 'Uploaded photos are stored in ' + (health.storage === 'local' ? 'the local .admin-data folder' : 'Vercel Blob') + '. Add Cloudinary keys to store them in Cloudinary instead.'}
+            : 'Uploaded photos are stored in ' + ({ local: 'the local .admin-data folder', supabase: 'Supabase Storage' }[health.storage] || 'Vercel Blob') + '. Add Cloudinary keys to store them in Cloudinary instead.'}
         </p>
       )}
 

@@ -1,10 +1,12 @@
 // Where admin content and photos are kept.
-//  - On Vercel: Vercel Blob (needs BLOB_READ_WRITE_TOKEN, added when a Blob store
+//  - Supabase, when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set (see supabase.js).
+//  - Otherwise on Vercel: Vercel Blob (needs BLOB_READ_WRITE_TOKEN, added when a Blob store
 //    is connected to the project).
 //  - In local development (`npm run dev`): files in .admin-data/ (git-ignored).
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { supabase, sbGetContent, sbSaveContent, sbListHistory, sbGetVersion, sbListMedia, sbPutMedia, sbDeleteMedia } from './supabase.js'
 
 const CONTENT = 'site/content.json'
 const HISTORY = 'site/history/'
@@ -14,12 +16,12 @@ const KEEP_VERSIONS = 30
 const localDir = () => process.env.VC_LOCAL_STORE
 // absolute, so the website (another port) can show photos uploaded in local test mode
 const localMediaBase = () => process.env.VC_LOCAL_MEDIA_BASE || ''
-export const storageMode = () => (process.env.BLOB_READ_WRITE_TOKEN ? 'blob' : localDir() ? 'local' : null)
+export const storageMode = () => (supabase() ? 'supabase' : process.env.BLOB_READ_WRITE_TOKEN ? 'blob' : localDir() ? 'local' : null)
 
 function requireStorage() {
   if (!storageMode()) {
     throw Object.assign(
-      new Error('No storage is connected. In Vercel, open the project → Storage → create a Blob store and connect it, then redeploy.'),
+      new Error('No storage is connected. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to the Vercel project (or connect a Blob store), then redeploy.'),
       { status: 503 }
     )
   }
@@ -56,6 +58,7 @@ async function fetchJson(url) {
 export async function getContent() {
   const mode = storageMode()
   if (!mode) return null
+  if (mode === 'supabase') return sbGetContent(supabase())
   if (mode === 'local') {
     try {
       return JSON.parse(await fs.readFile(path.join(localDir(), CONTENT), 'utf8'))
@@ -77,6 +80,7 @@ export async function getContent() {
 
 export async function saveContent(doc) {
   requireStorage()
+  if (storageMode() === 'supabase') return sbSaveContent(supabase(), doc, KEEP_VERSIONS)
   const body = JSON.stringify(doc)
   const id = stamp()
   if (storageMode() === 'local') {
@@ -98,6 +102,7 @@ export async function saveContent(doc) {
 
 export async function listHistory() {
   requireStorage()
+  if (storageMode() === 'supabase') return sbListHistory(supabase(), KEEP_VERSIONS)
   let items
   if (storageMode() === 'local') {
     const dir = path.join(localDir(), HISTORY)
@@ -116,6 +121,7 @@ export async function listHistory() {
 
 export async function getVersion(id) {
   requireStorage()
+  if (storageMode() === 'supabase') return sbGetVersion(supabase(), id)
   if (!/^[\dTZ-]+$/.test(id || '')) throw Object.assign(new Error('Unknown version'), { status: 404 })
   if (storageMode() === 'local') {
     try {
@@ -261,6 +267,7 @@ export async function listMedia() {
   const c = cloudinary()
   if (c) return cldList(c)
   requireStorage()
+  if (storageMode() === 'supabase') return sbListMedia(supabase())
   if (storageMode() === 'local') {
     const dir = path.join(localDir(), MEDIA)
     const files = await fs.readdir(dir).catch(() => [])
@@ -285,6 +292,7 @@ export async function putMedia(name, type, buffer) {
   if (c) return cldUpload(c, name, type, buffer)
   requireStorage()
   const file = safeName(name, type)
+  if (storageMode() === 'supabase') return sbPutMedia(supabase(), file, type, buffer)
   if (storageMode() === 'local') {
     const dir = path.join(localDir(), MEDIA)
     await fs.mkdir(dir, { recursive: true })
@@ -300,6 +308,7 @@ export async function deleteMedia(url) {
   const c = cloudinary()
   if (c) return cldDelete(c, url)
   requireStorage()
+  if (storageMode() === 'supabase') return sbDeleteMedia(supabase(), url)
   if (storageMode() === 'local') {
     const rel = String(url || '').replace(localMediaBase(), '')
     const m = /^\/__local-media\/([^/]+)$/.exec(rel)

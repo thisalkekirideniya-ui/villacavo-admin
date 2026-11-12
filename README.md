@@ -10,7 +10,8 @@ upload/delete photos, preview unpublished changes and restore earlier published 
 npm install
 npm run dev      # http://localhost:5174   password: admin
 ```
-Locally the backend runs inside the dev server and saves to a git-ignored `.admin-data/` folder.
+Locally the backend runs inside the dev server and saves to a git-ignored `.admin-data/` folder
+(or to Supabase, if `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are in `.env.local`).
 To test Cloudinary uploads locally, put `CLOUDINARY_URL=...` in a `.env.local` file (git-ignored).
 Start the website too (`npm run dev` in the parent `VILLA CAVO` folder, port 5173) to use Preview and see changes.
 
@@ -19,16 +20,20 @@ This is its own git repository (`villacavo-admin`), fully separate from the webs
 in the website's `admin/` folder, which the website's `.gitignore` excludes.
 1. Push this folder to its own GitHub repository (not the website's).
 2. Vercel → **Add New → Project** → import that admin repository (Framework preset: Vite). Deploy.
-3. **Storage → Create → Blob** (public access) → connect it to this admin project.
-   This adds `BLOB_READ_WRITE_TOKEN` automatically.
+3. **Storage — Supabase (recommended):** create a project at supabase.com, open **SQL Editor → New query**,
+   paste [`supabase/setup.sql`](supabase/setup.sql) and **Run**. Then add `SUPABASE_URL` and
+   `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API) in step 4. Page text and publish history go to the
+   `site_versions` table; uploaded photos go to the `media` bucket unless Cloudinary is set.
+   *Or* use **Storage → Create → Blob** (public access) in Vercel instead, which adds `BLOB_READ_WRITE_TOKEN`.
+   If both are set, Supabase is used.
 4. **Settings → Environment Variables:**
    - `ADMIN_PASSWORD` — the password for signing in
    - `VITE_SITE_URL` — the website address, e.g. `https://villacavo.vercel.app` (for Preview)
    - Optional — photos in **Cloudinary**: `CLOUDINARY_URL` — copy the “API environment variable”
      (`cloudinary://KEY:SECRET@CLOUD_NAME`) from the Cloudinary dashboard. Uploaded photos then go to
      the `villa-cavo` folder in Cloudinary (change with `CLOUDINARY_FOLDER`) and are served with
-     automatic format and quality. Without it, photos are stored in Vercel Blob. Page text is always
-     kept in Vercel Blob, so the Blob store is still needed.
+     automatic format and quality. Without it, photos are stored in Vercel Blob. Page text is kept in
+     Supabase (or Vercel Blob).
 5. **Redeploy** the admin project.
 6. In the **website** project add `VITE_CONTENT_URL` = `https://<admin-address>/api/content`, then redeploy the website.
 
