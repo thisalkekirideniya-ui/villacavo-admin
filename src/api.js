@@ -1,5 +1,8 @@
 const TOKEN_KEY = 'vc-admin-token'
 
+// The backend is its own project (villacavo-backend) on its own address.
+const API_URL = String(import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5175' : '')).replace(/\/+$/, '')
+
 export function getToken() {
   try {
     const raw = localStorage.getItem(TOKEN_KEY)
@@ -35,19 +38,20 @@ export class ApiError extends Error {
 }
 
 async function call(path, { method = 'GET', body } = {}) {
+  if (!API_URL) throw new ApiError('The backend address is missing: set VITE_API_URL in the admin project on Vercel, then redeploy.', 0)
   const headers = { Accept: 'application/json' }
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   let res
   try {
-    res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    res = await fetch(API_URL + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
   } catch {
-    throw new ApiError('Could not reach the server. Check your internet connection.', 0)
+    throw new ApiError('Could not reach the backend. Check your internet connection, or that the backend is running.', 0)
   }
   const type = res.headers.get('content-type') || ''
   if (!type.includes('application/json')) {
-    throw new ApiError('The admin backend is not responding. Deploy the admin folder to Vercel, or run `npm run dev` inside the admin folder.', 404)
+    throw new ApiError('The backend is not responding. Check VITE_API_URL, or run `npm run dev` inside the backend folder.', 404)
   }
   const data = await res.json()
   if (res.status === 401 && path !== '/api/login') {

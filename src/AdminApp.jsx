@@ -164,7 +164,7 @@ function Login({ onSignedIn }) {
                 <SetupItem ok={health.media === 'cloudinary'} text="Cloudinary keys added (stores uploaded photos — optional)" />
               </ul>
             )}
-            <p className="mt-3 text-xs text-stone-500">Set these in your Vercel project, then redeploy.</p>
+            <p className="mt-3 text-xs text-stone-500">Set these in the backend project on Vercel, then redeploy it.</p>
           </Card>
         )}
         <p className="mt-6 text-center text-xs text-stone-400">
@@ -514,7 +514,7 @@ function Dashboard({ draft, dirty, health, publish, publishing, navigate, media 
           <p className="mt-1 text-stone-600">
             {health.storage === 'local'
               ? 'You are running the admin on your computer. Changes and photos are saved in the .admin-data folder only — publish from the live Vercel site to change the real website.'
-              : 'Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to this Vercel project (or connect a Blob store), then redeploy. Until then, publishing and uploads will fail.'}
+              : 'Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to the backend project on Vercel (or connect a Blob store there), then redeploy. Until then, publishing and uploads will fail.'}
           </p>
         </Card>
       )}
@@ -562,7 +562,7 @@ function Dashboard({ draft, dirty, health, publish, publishing, navigate, media 
           <li>Press <strong>Publish</strong> to make them live. The site updates within about a minute.</li>
           <li>Made a mistake? <button className="text-terra-600 underline" onClick={() => go('history')}>Publish history</button> lets you bring back an earlier version.</li>
         </ol>
-        <p className="mt-4 text-xs text-stone-500">To change the admin password, update ADMIN_PASSWORD in your Vercel project settings and redeploy.</p>
+        <p className="mt-4 text-xs text-stone-500">To change the admin password, update ADMIN_PASSWORD in the backend project on Vercel and redeploy it.</p>
       </Card>
     </div>
   )

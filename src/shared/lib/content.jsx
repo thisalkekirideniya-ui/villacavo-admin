@@ -20,13 +20,15 @@ export const DRAFT_KEY = 'vc-admin-draft'
 const PREVIEW_FLAG = 'vc-preview'
 const PREVIEW_DRAFT = 'vc-preview-draft'
 
-// The admin panel is a separate project; published content is read from its API.
+// Published content is read from the backend (its own project, shared with the admin panel).
 // Without an address the site simply shows its built-in content.
 const CONTENT_URL =
-  import.meta.env.VITE_CONTENT_URL || (import.meta.env.DEV ? 'http://localhost:5174/api/content' : '')
+  import.meta.env.VITE_CONTENT_URL || (import.meta.env.DEV ? 'http://localhost:5175/api/content' : '')
+// The admin panel (another project again) sends its unpublished draft for Preview.
 const ADMIN_ORIGIN = (() => {
   try {
-    return CONTENT_URL ? new URL(CONTENT_URL).origin : ''
+    const url = import.meta.env.VITE_ADMIN_URL || (import.meta.env.DEV ? 'http://localhost:5174' : '')
+    return url ? new URL(url).origin : ''
   } catch {
     return ''
   }
